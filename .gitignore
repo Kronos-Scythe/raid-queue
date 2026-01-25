@@ -32,6 +32,9 @@ bin/
 
 run/
 
+# libs - large JAR files
+libs/
+
 # java
 
 hs_err_*.log
