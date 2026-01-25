@@ -1,0 +1,145 @@
+plugins {
+	id 'fabric-loom' version "${loom_version}"
+	id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+	archivesName = project.archives_base_name
+}
+
+repositories {
+	mavenCentral()
+	maven { url = "https://maven.fabricmc.net/" }
+	maven { url = "https://maven.impactdev.net/repository/development/" }
+	maven {
+		url = "https://www.cursemaven.com"
+		content { includeGroup "curse.maven" }
+	}
+	maven { url = "https://maven.shedaniel.me/" }
+	maven { url = "https://maven.terraformersmc.com/" }
+	maven { url = "https://maven.wispforest.io" }
+	maven { url = "https://api.modrinth.com/maven" }
+
+	flatDir {
+		dirs "libs"
+	}
+}
+
+loom {
+	mods {
+		"raid-den-queue" {
+			sourceSet sourceSets.main
+		}
+	}
+
+	runs {
+		client {
+			ideConfigGenerated = true
+			runDir = "run"
+		}
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${minecraft_version}"
+	mappings "net.fabricmc:yarn:${yarn_mappings}:v2"
+	modImplementation "net.fabricmc:fabric-loader:${loader_version}"
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+	modImplementation "net.fabricmc:fabric-language-kotlin:${fabric_kotlin}"
+
+	// Cobblemon + GeckoLib
+	modImplementation "com.cobblemon:fabric:${cobblemon_version}"
+	modImplementation "software.bernie.geckolib:geckolib-fabric-1.21.1:${geckolib_version}"
+
+	// Cloth Config (required by Raid Dens)
+	include(modApi "me.shedaniel.cloth:cloth-config-fabric:${cloth_config_version}")
+
+	// Raid Dens (LOCAL JAR)
+	modImplementation files("libs/cobblemonraiddens-fabric-${raiddens_version}.jar")
+
+	// OWO (required by Accessories)
+	modImplementation "io.wispforest:owo-lib:0.12.15.4+1.21"
+
+	// Optional runtime mods
+	modImplementation "com.terraformersmc:modmenu:11.0.3"
+	modRuntimeOnly "io.wispforest:accessories-fabric:1.1.0-beta.52+1.21.1"
+	modRuntimeOnly "dev.architectury:architectury-fabric:13.0.8"
+
+	// Curse Maven addons (runtime only to avoid obfuscated compile deps)
+	modRuntimeOnly "curse.maven:cobblemon-mega-showdown-1189523:7488228"
+	modRuntimeOnly "curse.maven:cobbledollars-859232:6604561"
+	modRuntimeOnly "curse.maven:radical-cobblemon-trainers-api-1152792:7257754"
+
+	// Optional compile-time visibility (no runtime loading)
+	modCompileOnly "curse.maven:distant-horizons-508933:6791190"
+}
+
+processResources {
+	inputs.property "version", project.version
+	filesMatching("fabric.mod.json") {
+		expand "version": project.version
+	}
+}
+
+java {
+	withSourcesJar()
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+}
+
+tasks.withType(JavaCompile).configureEach {
+	options.release = 21
+}
+
+// Add JVM arguments for Minecraft to allow access to internal Java modules on Java 21
+tasks.named("runClient", JavaExec).configure {
+	jvmArgs += [
+		"--add-opens", "java.base/java.lang=ALL-UNNAMED",
+		"--add-opens", "java.base/java.util=ALL-UNNAMED",
+		"--add-opens", "java.base/java.lang.reflect=ALL-UNNAMED",
+		"--add-opens", "java.base/java.io=ALL-UNNAMED"
+	]
+}
+
+publishing {
+	publications {
+		create("mavenJava", MavenPublication) {
+			artifactId = project.archives_base_name
+			from components.java
+		}
+	}
+}
+
+// Auto-copy built JAR to Modrinth modpack folder
+task copyToModpack(type: Copy) {
+	dependsOn build
+	from file("${buildDir}/libs/${project.archives_base_name}-${project.version}.jar")
+	into file("C:/Users/Kronos/AppData/Roaming/ModrinthApp/profiles/MODPACK DEV/mods")
+
+	// Always run this task, even if Gradle thinks it's up-to-date
+	outputs.upToDateWhen { false }
+
+	doLast {
+		println ""
+		println "✅ SUCCESS: Copied ${project.archives_base_name}-${project.version}.jar to Modrinth modpack!"
+		println "📁 Location: C:/Users/Kronos/AppData/Roaming/ModrinthApp/profiles/MODPACK DEV/mods"
+		println ""
+	}
+}
+
+// Automatically run copyToModpack after build
+build.finalizedBy copyToModpack
+
+sourceSets {
+    main {
+        java {
+            srcDirs += "src/client/java"
+        }
+        resources {
+            srcDir "src/client/resources"
+        }
+    }
+}

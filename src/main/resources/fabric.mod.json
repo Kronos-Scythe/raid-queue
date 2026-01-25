@@ -1,0 +1,38 @@
+{
+	"schemaVersion": 1,
+	"id": "raid-den-queue",
+	"version": "${version}",
+	"name": "Raid Den Queue",
+	"description": "This is an example description! Tell everyone what your mod is about!",
+	"authors": [
+		"Me!"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/raid-den-queue/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"raidqueue.RaidDenQueue"
+		],
+		"client": [
+			"raidqueue.RaidDenQueueClient"
+		]
+	},
+	"mixins": [
+		"raid-den-queue.mixins.json",
+		{
+			"config": "raid-den-queue.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.18.4",
+		"minecraft": "~1.21.1",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
