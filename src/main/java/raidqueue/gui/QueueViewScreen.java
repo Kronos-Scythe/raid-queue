@@ -114,23 +114,48 @@ public class QueueViewScreen {
         // Confirm button (green wool) - bottom row
         ItemStack confirm = new ItemStack(Items.LIME_WOOL);
         boolean isQueued = RaidDenQueueManager.isQueued(player.getUuid());
-        String confirmText = isQueued ? "§a§l✔ START RAID NOW!" : "§a§l✔ JOIN & START RAID!";
-        confirm.set(DataComponentTypes.CUSTOM_NAME, Text.literal(confirmText));
-        confirm.set(DataComponentTypes.LORE, new net.minecraft.component.type.LoreComponent(
-            List.of(
-                Text.literal("§7Click to begin the raid"),
-                Text.literal("§7with current players"),
-                Text.literal(""),
-                queuedPlayers.isEmpty()
-                    ? Text.literal("§e⚠ You'll raid solo!")
-                    : Text.literal("§a" + (isQueued ? queuedPlayers.size() : queuedPlayers.size() + 1) + " player(s) will participate")
-            )
-        ));
+
+        if (isQueued) {
+            // Player is in queue - button starts the raid
+            confirm.set(DataComponentTypes.CUSTOM_NAME, Text.literal("§a§l✔ START RAID NOW!"));
+            confirm.set(DataComponentTypes.LORE, new net.minecraft.component.type.LoreComponent(
+                List.of(
+                    Text.literal("§7Click to begin the raid"),
+                    Text.literal("§7with all queued players"),
+                    Text.literal(""),
+                    Text.literal("§a" + queuedPlayers.size() + " player(s) ready!")
+                )
+            ));
+        } else {
+            // Player not in queue - button joins the queue
+            int totalAfterJoin = queuedPlayers.size() + 1;
+            confirm.set(DataComponentTypes.CUSTOM_NAME, Text.literal("§e§l⭐ JOIN QUEUE"));
+            confirm.set(DataComponentTypes.LORE, new net.minecraft.component.type.LoreComponent(
+                List.of(
+                    Text.literal("§7Click to join this queue"),
+                    Text.literal("§7Wait for others or start"),
+                    Text.literal(""),
+                    queuedPlayers.isEmpty()
+                        ? Text.literal("§7Be the first to join!")
+                        : Text.literal("§e" + queuedPlayers.size() + " player(s) waiting")
+                )
+            ));
+        }
         inv.setStack(21, confirm);
 
         // Back button (red wool) - bottom row right side
         ItemStack back = new ItemStack(Items.RED_WOOL);
-        back.set(DataComponentTypes.CUSTOM_NAME, Text.literal("§c✖ Back to Menu"));
+        if (isQueued) {
+            back.set(DataComponentTypes.CUSTOM_NAME, Text.literal("§c✖ Leave Queue & Back"));
+            back.set(DataComponentTypes.LORE, new net.minecraft.component.type.LoreComponent(
+                List.of(
+                    Text.literal("§7You will leave this queue"),
+                    Text.literal("§7and return to main menu")
+                )
+            ));
+        } else {
+            back.set(DataComponentTypes.CUSTOM_NAME, Text.literal("§c✖ Back to Menu"));
+        }
         inv.setStack(23, back);
 
         player.openHandledScreen(new NamedScreenHandlerFactory() {
@@ -168,61 +193,87 @@ public class QueueViewScreen {
                         // Prevent item pickup
                         serverPlayer.playerScreenHandler.setCursorStack(ItemStack.EMPTY);
 
-                        // Confirm - Start the raid immediately with current queued players
+                        // Green Wool - Join queue OR start raid if already in queue
                         if (slot == 21) {
-                            serverPlayer.closeHandledScreen();
-
-                            // Get all players currently in this queue
-                            List<ServerPlayerEntity> queuedPlayers = RaidDenQueueManager.getQueuedPlayers(
-                                serverPlayer.getServer(),
-                                difficulty
-                            );
-
-                            // Add the current player if they're not already queued
+                            // Check if player is already in the queue
                             if (!RaidDenQueueManager.isQueued(serverPlayer.getUuid())) {
+                                // Not in queue - add them and keep screen open
                                 RaidDenQueueManager.join(serverPlayer, difficulty);
-                                // Refresh the list to include the new player
-                                queuedPlayers = RaidDenQueueManager.getQueuedPlayers(
+
+                                // Reopen the screen to show updated state
+                                serverPlayer.closeHandledScreen();
+                                MinecraftServer server = serverPlayer.getServer();
+                                if (server != null) {
+                                    server.execute(() -> open(serverPlayer, difficulty));
+                                }
+                                return;
+                            } else {
+                                // Already in queue - start the raid
+                                serverPlayer.closeHandledScreen();
+
+                                // Get all players currently in this queue
+                                List<ServerPlayerEntity> queuedPlayers = RaidDenQueueManager.getQueuedPlayers(
                                     serverPlayer.getServer(),
                                     difficulty
                                 );
-                            }
 
-                            // Validate we have players
-                            if (queuedPlayers.isEmpty()) {
+                                // Validate we have players
+                                if (queuedPlayers.isEmpty()) {
+                                    serverPlayer.sendMessage(
+                                        Text.literal("§c✗ No players in queue! Something went wrong."),
+                                        false
+                                    );
+                                    return;
+                                }
+
+                                // Start the raid with whoever is in the queue
                                 serverPlayer.sendMessage(
-                                    Text.literal("§c✗ No players in queue! Something went wrong."),
+                                    Text.literal("§a§l✓ Starting raid with " + queuedPlayers.size() + " player(s)!"),
                                     false
                                 );
+
+                                // Notify all players in queue
+                                for (ServerPlayerEntity queuedPlayer : queuedPlayers) {
+                                    if (!queuedPlayer.equals(serverPlayer)) {
+                                        queuedPlayer.sendMessage(
+                                            Text.literal("§a§l✓ " + serverPlayer.getName().getString() + " started the raid!"),
+                                            false
+                                        );
+                                    }
+                                }
+
+                                // Launch the raid with the selected difficulty
+                                raidqueue.raiddens.RaidDenLauncher.tryLaunch(
+                                    serverPlayer.getServerWorld(),
+                                    queuedPlayers,
+                                    difficulty  // Pass the difficulty (1-5 stars)
+                                );
+
+                                // Clear the queue after starting
+                                RaidDenQueueManager.clear(difficulty);
                                 return;
                             }
-
-                            // Start the raid immediately with whoever is in the queue
-                            serverPlayer.sendMessage(
-                                Text.literal("§a§l✓ Starting raid with " + queuedPlayers.size() + " player(s)!"),
-                                false
-                            );
-
-                            // Launch the raid with the selected difficulty
-                            raidqueue.raiddens.RaidDenLauncher.tryLaunch(
-                                serverPlayer.getServerWorld(),
-                                queuedPlayers,
-                                difficulty  // Pass the difficulty (1-5 stars)
-                            );
-
-                            // Clear the queue after starting
-                            RaidDenQueueManager.clear(difficulty);
-                            return;
                         }
 
-                        // Back - Return to main queue selection
+                        // Back - Leave queue if in one, then return to main menu
                         if (slot == 23) {
+                            // If player is in this queue, remove them
+                            if (RaidDenQueueManager.isQueued(serverPlayer.getUuid())) {
+                                RaidDenQueueManager.leave(serverPlayer);
+                                serverPlayer.sendMessage(
+                                    Text.literal("§e✓ Left " + difficulty + "★ raid queue"),
+                                    false
+                                );
+                            }
+
                             serverPlayer.closeHandledScreen();
                             // Re-open the main queue selection menu
-                            player.getServer().execute(() ->
-                                raidqueue.command.RaidDenQueueCommand.openQueue(serverPlayer.getCommandSource())
-                            );
-                            return;
+                            MinecraftServer server = player.getServer();
+                            if (server != null) {
+                                server.execute(() ->
+                                    raidqueue.command.RaidDenQueueCommand.openQueue(serverPlayer.getCommandSource())
+                                );
+                            }
                         }
 
                         // Block all other interactions

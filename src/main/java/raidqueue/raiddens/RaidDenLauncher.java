@@ -52,7 +52,11 @@ public final class RaidDenLauncher {
         PlayerLocation loc = PLAYER_POSITIONS.remove(uuid);
 
         if (loc == null) {
-            player.sendMessage(Text.literal("§eNo previous location saved."), false);
+            player.sendMessage(Text.literal("§cNo previous location saved. Teleporting to world spawn."), false);
+            // Fallback to world spawn
+            ServerWorld overworld = player.getServer().getOverworld();
+            BlockPos spawnPos = overworld.getSpawnPos();
+            player.teleport(overworld, spawnPos.getX(), spawnPos.getY(), spawnPos.getZ(), 0, 0);
             return;
         }
 
@@ -61,11 +65,21 @@ public final class RaidDenLauncher {
 
         ServerWorld world = server.getWorld(loc.world);
         if (world == null) {
-            player.sendMessage(Text.literal("§cCouldn't find your previous world!"), false);
+            player.sendMessage(Text.literal("§cCouldn't find your previous world! Teleporting to world spawn."), false);
+            // Fallback to world spawn
+            ServerWorld overworld = server.getOverworld();
+            BlockPos spawnPos = overworld.getSpawnPos();
+            player.teleport(overworld, spawnPos.getX(), spawnPos.getY(), spawnPos.getZ(), 0, 0);
             return;
         }
 
-        player.teleport(world, loc.x, loc.y, loc.z, loc.yaw, loc.pitch);
+        // Safety check: ensure Y position is valid
+        double safeY = loc.y;
+        if (safeY < world.getBottomY()) {
+            safeY = world.getSeaLevel();
+        }
+
+        player.teleport(world, loc.x, safeY, loc.z, loc.yaw, loc.pitch);
         player.sendMessage(Text.literal("§a✓ Teleported back to your previous location!"), false);
     }
 
@@ -92,6 +106,7 @@ public final class RaidDenLauncher {
         ServerPlayerEntity leader = players.get(0);
         MinecraftServer server = world.getServer();
 
+        // Save positions for ALL players BEFORE anything else
         for (ServerPlayerEntity player : players) {
             PLAYER_POSITIONS.put(player.getUuid(), new PlayerLocation(player));
         }
@@ -177,17 +192,15 @@ public final class RaidDenLauncher {
                             false
                         );
 
-                        var interactionManager = leader.interactionManager;
                         var hand = net.minecraft.util.Hand.MAIN_HAND;
 
-                        interactionManager.interactBlock(leader, world, leader.getStackInHand(hand), hand, hitResult);
-
-                        leader.sendMessage(Text.literal("§a✓ Starting " + difficulty + "★ raid..."), false);
-
+                        // Make ALL players interact with the crystal to enter the raid
                         for (ServerPlayerEntity player : players) {
-                            if (player != leader) {
-                                player.sendMessage(Text.literal("§e" + leader.getName().getString() + " §7started the raid!"), false);
-                            }
+                            player.sendMessage(Text.literal("§a✓ Entering " + difficulty + "★ raid..."), false);
+
+                            // Each player interacts with the crystal to get teleported
+                            var interactionManager = player.interactionManager;
+                            interactionManager.interactBlock(player, world, player.getStackInHand(hand), hand, hitResult);
                         }
 
                     } catch (Exception e) {
