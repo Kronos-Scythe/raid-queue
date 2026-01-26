@@ -14,19 +14,51 @@ import net.minecraft.screen.NamedScreenHandlerFactory;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import raidqueue.RaidDenQueueManager;
 
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class QueueViewScreen {
+
+    // Track which players have the queue screen open and for which difficulty
+    private static final Map<UUID, Integer> OPEN_QUEUE_SCREENS = new ConcurrentHashMap<>();
+
+    /**
+     * Called when a player joins a queue - refreshes all open queue screens for that difficulty
+     */
+    public static void refreshQueueScreens(MinecraftServer server, int difficulty) {
+        OPEN_QUEUE_SCREENS.forEach((playerUuid, openDifficulty) -> {
+            if (openDifficulty == difficulty) {
+                ServerPlayerEntity player = server.getPlayerManager().getPlayer(playerUuid);
+                if (player != null) {
+                    // Re-open the screen to refresh it
+                    server.execute(() -> open(player, difficulty));
+                }
+            }
+        });
+    }
+
+    /**
+     * Closes the queue screen tracking for a player
+     */
+    public static void closeQueueScreen(UUID playerUuid) {
+        OPEN_QUEUE_SCREENS.remove(playerUuid);
+    }
 
     /**
      * Opens a GUI showing all players in the queue for a specific difficulty.
      * Shows player heads in the middle and confirm/back buttons.
      */
     public static void open(ServerPlayerEntity player, int difficulty) {
+        // Register that this player has the queue screen open
+        OPEN_QUEUE_SCREENS.put(player.getUuid(), difficulty);
+
         List<ServerPlayerEntity> queuedPlayers = RaidDenQueueManager.getQueuedPlayers(
                 player.getServer(),
                 difficulty
@@ -42,19 +74,25 @@ public class QueueViewScreen {
             inv.setStack(i, glassPane.copy());
         }
 
-        // Display player heads in the middle row (slots 10-15)
+        // Display ALL queued player heads in the middle row (slots 10-15)
         int headStartSlot = 10; // Start of second row, leave room for 4 players
+        boolean currentPlayerInQueue = false;
+
+        // First, show all players already in the queue
         for (int i = 0; i < Math.min(queuedPlayers.size(), 4); i++) {
             ServerPlayerEntity queuedPlayer = queuedPlayers.get(i);
+            if (queuedPlayer.getUuid().equals(player.getUuid())) {
+                currentPlayerInQueue = true;
+            }
             ItemStack head = createPlayerHead(queuedPlayer);
             inv.setStack(headStartSlot + i, head);
         }
 
         // If current player is not queued yet, show their head with a "Join" indicator
-        if (!RaidDenQueueManager.isQueued(player.getUuid())) {
+        if (!currentPlayerInQueue && queuedPlayers.size() < 4) {
             ItemStack yourHead = createPlayerHead(player);
             yourHead.set(DataComponentTypes.CUSTOM_NAME, Text.literal("§e⭐ You §7(Click green to join)"));
-            inv.setStack(headStartSlot + Math.min(queuedPlayers.size(), 3), yourHead);
+            inv.setStack(headStartSlot + queuedPlayers.size(), yourHead);
         }
 
         // Queue info in top center
@@ -113,6 +151,13 @@ public class QueueViewScreen {
                     @Override
                     public boolean canUse(PlayerEntity player) {
                         return true;
+                    }
+
+                    @Override
+                    public void onClosed(PlayerEntity player) {
+                        super.onClosed(player);
+                        // Remove from tracking when screen is closed
+                        closeQueueScreen(player.getUuid());
                     }
 
                     @Override

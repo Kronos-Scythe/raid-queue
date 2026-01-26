@@ -58,6 +58,9 @@ public class RaidDenQueueManager {
                 Text.literal("§eℹ Ready to start? Use §a/rqueue §eand click the green wool!")
             );
         }
+
+        // Refresh all open queue screens for this difficulty
+        raidqueue.gui.QueueViewScreen.refreshQueueScreens(player.getServer(), difficulty);
     }
 
 
