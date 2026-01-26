@@ -6,6 +6,8 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
 import net.minecraft.screen.GenericContainerScreenHandler;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.screen.slot.SlotActionType;
@@ -65,11 +67,13 @@ public class RaidDenQueueCommand {
 
         // Add a title item in the top center
         ItemStack title = new ItemStack(Items.NETHER_STAR);
-        title.set(DataComponentTypes.CUSTOM_NAME, Text.literal("§e§lSelect Raid Difficulty"));
+        title.set(DataComponentTypes.CUSTOM_NAME, Text.literal("§e§lRaid Den Queue"));
         title.set(DataComponentTypes.LORE, new net.minecraft.component.type.LoreComponent(
             List.of(
-                Text.literal("§7Click a star to join that raid tier"),
-                Text.literal("§71★ = Easy | 5★ = Hard")
+                Text.literal("§7Select a difficulty tier below"),
+                Text.literal("§7to join the queue"),
+                Text.literal(""),
+                Text.literal("§e1★ §7= Easy §8| §e5★ §7= Hard")
             )
         ));
         inv.setStack(4, title);
@@ -136,7 +140,8 @@ public class RaidDenQueueCommand {
     }
 
     private static ItemStack star(int level) {
-        ItemStack stack = new ItemStack(Items.NETHER_STAR);
+        // Using ultra ball for visual representation, but conceptually represents nether star raid tiers
+        ItemStack stack = new ItemStack(Registries.ITEM.get(new Identifier("cobblemon", "ultra_ball")));
         stack.set(
                 DataComponentTypes.CUSTOM_NAME,
                 Text.literal("§e" + level + "★ Raid")

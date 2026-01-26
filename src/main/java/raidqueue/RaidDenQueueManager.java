@@ -43,7 +43,7 @@ public class RaidDenQueueManager {
                 false
         );
         player.sendMessage(
-                Text.literal("§7Wait for others or start now with §a/raidden queue"),
+                Text.literal("§7Wait for others or start now with §a/rqueue"),
                 false
         );
 
@@ -55,7 +55,7 @@ public class RaidDenQueueManager {
         // If queue has players, remind them they can start
         if (queue.size() > 1) {
             notifyQueuePlayers(player.getServer(), difficulty,
-                Text.literal("§eℹ Ready to start? Use §a/raidden queue §eand click the green wool!")
+                Text.literal("§eℹ Ready to start? Use §a/rqueue §eand click the green wool!")
             );
         }
     }

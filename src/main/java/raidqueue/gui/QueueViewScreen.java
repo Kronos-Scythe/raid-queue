@@ -7,6 +7,8 @@ import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
 import net.minecraft.screen.GenericContainerScreenHandler;
 import net.minecraft.screen.NamedScreenHandlerFactory;
 import net.minecraft.screen.ScreenHandler;
@@ -56,7 +58,7 @@ public class QueueViewScreen {
         }
 
         // Queue info in top center
-        ItemStack info = new ItemStack(Items.NETHER_STAR);
+        ItemStack info = new ItemStack(Registries.ITEM.get(new Identifier("cobblemon", "ultra_ball")));
         String status = queuedPlayers.isEmpty() ? "§7Empty" : "§a" + queuedPlayers.size() + " Ready";
         info.set(DataComponentTypes.CUSTOM_NAME,
             Text.literal("§e" + difficulty + "★ Raid Queue")

@@ -12,7 +12,7 @@ public class RaidTeleportBackCommand {
     public static void register() {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
                 dispatcher.register(
-                        CommandManager.literal("raidden")
+                        CommandManager.literal("rqueue")
                                 .then(CommandManager.literal("back")
                                         .executes(ctx -> teleportBack(ctx.getSource()))
                                 )
