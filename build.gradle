@@ -43,6 +43,19 @@ loom {
 	}
 }
 
+// Raid Dens isn't published to a maven repo we can pull from, so it has to be dropped
+// into libs/ by hand. Fail fast with a clear message instead of a confusing
+// "class not found" error deep into compilation if it's missing or the wrong version.
+def raidDensJar = file("libs/cobblemonraiddens-fabric-${raiddens_version}.jar")
+if (!raidDensJar.exists()) {
+	throw new GradleException(
+		"Missing Raid Dens jar: ${raidDensJar}\n" +
+		"Download cobblemonraiddens-fabric-${raiddens_version}.jar from Modrinth/CurseForge " +
+		"and place it in libs/, or update raiddens_version in gradle.properties to match " +
+		"whichever build you have."
+	)
+}
+
 dependencies {
 	minecraft "com.mojang:minecraft:${minecraft_version}"
 	mappings "net.fabricmc:yarn:${yarn_mappings}:v2"
@@ -57,8 +70,8 @@ dependencies {
 	// Cloth Config (required by Raid Dens)
 	include(modApi "me.shedaniel.cloth:cloth-config-fabric:${cloth_config_version}")
 
-	// Raid Dens (LOCAL JAR)
-	modImplementation files("libs/cobblemonraiddens-fabric-${raiddens_version}.jar")
+	// Raid Dens (LOCAL JAR - not published to a maven repo we can pull from)
+	modImplementation files(raidDensJar)
 
 	// OWO (required by Accessories)
 	modImplementation "io.wispforest:owo-lib:0.12.15.4+1.21"

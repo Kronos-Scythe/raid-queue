@@ -3,17 +3,18 @@ package raidqueue;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
-import raidqueue.raiddens.RaidDenLauncher;
+import raidqueue.config.RaidQueueConfig;
+import raidqueue.raiddens.RaidTierSupport;
 import java.util.*;
 
 public class RaidDenQueueManager {
 
-    // 1★ → 5★ queues
+    // One queue per raid tier (1-7, gated by RaidTierSupport for tiers above 5).
     private static final Map<Integer, Set<UUID>> QUEUES = new HashMap<>();
 
     static {
-        for (int i = 1; i <= 5; i++) {
-            QUEUES.put(i, new LinkedHashSet<>());
+        for (int tier = RaidTierSupport.MIN_TIER; tier <= RaidTierSupport.MAX_TIER; tier++) {
+            QUEUES.put(tier, new LinkedHashSet<>());
         }
     }
 
@@ -21,7 +22,7 @@ public class RaidDenQueueManager {
      * Adds a player to a raid queue.
      */
     public static void join(ServerPlayerEntity player, int difficulty) {
-        if (!QUEUES.containsKey(difficulty)) {
+        if (!QUEUES.containsKey(difficulty) || !RaidTierSupport.isTierAvailable(difficulty)) {
             player.sendMessage(Text.literal("§cInvalid raid difficulty."), false);
             return;
         }
@@ -35,11 +36,17 @@ public class RaidDenQueueManager {
             return;
         }
 
+        int maxPartySize = RaidQueueConfig.get().maxPartySize;
+        if (queue.size() >= maxPartySize) {
+            player.sendMessage(Text.literal("§cThat raid queue is already full (" + maxPartySize + " players)."), false);
+            return;
+        }
+
         queue.add(uuid);
 
         player.sendMessage(
                 Text.literal("§a✓ Joined " + difficulty + "★ raid queue (§e"
-                        + queue.size() + "/4§a players ready)"),
+                        + queue.size() + "/" + maxPartySize + "§a players ready)"),
                 false
         );
         player.sendMessage(
@@ -49,7 +56,7 @@ public class RaidDenQueueManager {
 
         // Notify all other players in this queue
         notifyQueuePlayers(player.getServer(), difficulty,
-            Text.literal("§a✓ " + player.getName().getString() + " §7is ready! (§e" + queue.size() + "/4§7 players in queue)")
+            Text.literal("§a✓ " + player.getName().getString() + " §7is ready! (§e" + queue.size() + "/" + maxPartySize + "§7 players in queue)")
         );
 
         // If queue has players, remind them they can start

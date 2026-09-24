@@ -18,8 +18,8 @@ import net.minecraft.text.Text;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.screen.ScreenHandler;
 import net.minecraft.screen.NamedScreenHandlerFactory;
-import raidqueue.RaidDenQueueManager;
 import raidqueue.gui.QueueViewScreen;
+import raidqueue.raiddens.RaidTierSupport;
 
 import java.util.List;
 
@@ -28,6 +28,9 @@ import java.util.List;
  * Provides the /rqueue command for accessing raid matchmaking.
  */
 public class RaidDenQueueCommand {
+
+    private static final int ROW_START = 9;
+    private static final int ROW_LENGTH = 9;
 
     /**
      * Registers the /rqueue command.
@@ -47,6 +50,10 @@ public class RaidDenQueueCommand {
             return 0;
         }
 
+        List<Integer> tiers = RaidTierSupport.availableTiers();
+        // Centre the star row within the middle inventory row, however many tiers are on offer.
+        int startSlot = ROW_START + Math.max(0, (ROW_LENGTH - tiers.size()) / 2);
+
         // Create a 3-row chest (27 slots)
         SimpleInventory inv = new SimpleInventory(27);
 
@@ -57,13 +64,10 @@ public class RaidDenQueueCommand {
             inv.setStack(i, glassPane.copy());
         }
 
-        // Place the 5 difficulty stars in the center row (slots 11-15)
-        // Middle row is slots 9-17, so we center at 11-15
-        inv.setStack(11, star(1));
-        inv.setStack(12, star(2));
-        inv.setStack(13, star(3));
-        inv.setStack(14, star(4));
-        inv.setStack(15, star(5));
+        // Place a star item for each available tier, centred in the middle row.
+        for (int i = 0; i < tiers.size(); i++) {
+            inv.setStack(startSlot + i, star(tiers.get(i)));
+        }
 
         // Add a title item in the top center
         ItemStack title = new ItemStack(Items.NETHER_STAR);
@@ -73,7 +77,7 @@ public class RaidDenQueueCommand {
                 Text.literal("§7Select a difficulty tier below"),
                 Text.literal("§7to join the queue"),
                 Text.literal(""),
-                Text.literal("§e1★ §7= Easy §8| §e5★ §7= Hard")
+                Text.literal("§e1★ §7= Easy §8| §e" + tiers.getLast() + "★ §7= Hard")
             )
         ));
         inv.setStack(4, title);
@@ -114,9 +118,10 @@ public class RaidDenQueueCommand {
                             return;
                         }
 
-                        // Only react to left-clicks on the star slots (11-15)
-                        if (actionType == SlotActionType.PICKUP && slot >= 11 && slot <= 15) {
-                            int difficulty = slot - 10; // 11->1, 12->2, ..., 15->5
+                        // Only react to left-clicks on the star slots
+                        int tierIndex = slot - startSlot;
+                        if (actionType == SlotActionType.PICKUP && tierIndex >= 0 && tierIndex < tiers.size()) {
+                            int difficulty = tiers.get(tierIndex);
 
                             // Prevent item pickup
                             serverPlayer.playerScreenHandler.setCursorStack(ItemStack.EMPTY);
@@ -147,96 +152,6 @@ public class RaidDenQueueCommand {
                 Text.literal("§e" + level + "★ Raid")
         );
         return stack;
-    }
-
-    private static void handleQueueJoin(ServerPlayerEntity player, int difficulty) {
-        player.sendMessage(
-                Text.literal("§aJoined " + difficulty + "★ Raid Queue"),
-                false
-        );
-
-        // TODO:
-        // RaidDenQueueManager.join(player, difficulty);
-        // Hook into cobblemon-raiddens here
-    }
-    private static void openConfirmScreen(ServerPlayerEntity player, int difficulty) {
-
-        SimpleInventory inv = new SimpleInventory(9);
-
-        // Player head
-        ItemStack head = new ItemStack(Items.PLAYER_HEAD);
-        head.set(DataComponentTypes.CUSTOM_NAME, Text.literal("§e" + player.getName().getString()));
-        inv.setStack(3, head);
-
-        // Confirm button (green wool)
-        ItemStack confirm = new ItemStack(Items.GREEN_WOOL);
-        confirm.set(DataComponentTypes.CUSTOM_NAME, Text.literal("§aConfirm"));
-        inv.setStack(5, confirm);
-
-        // Back button (red wool)
-        ItemStack back = new ItemStack(Items.RED_WOOL);
-        back.set(DataComponentTypes.CUSTOM_NAME, Text.literal("§cBack"));
-        inv.setStack(7, back);
-
-        player.openHandledScreen(new NamedScreenHandlerFactory() {
-
-            @Override
-            public Text getDisplayName() {
-                return Text.literal("Confirm Raid Queue");
-            }
-
-            @Override
-            public ScreenHandler createMenu(
-                    int syncId,
-                    PlayerInventory playerInventory,
-                    PlayerEntity playerEntity
-            ) {
-                return new GenericContainerScreenHandler(
-                        ScreenHandlerType.GENERIC_9X1,
-                        syncId,
-                        playerInventory,
-                        inv,
-                        1
-                ) {
-
-                    @Override
-                    public boolean canUse(PlayerEntity player) {
-                        return true;
-                    }
-
-                    @Override
-                    public void onSlotClick(
-                            int slot,
-                            int button,
-                            SlotActionType actionType,
-                            PlayerEntity playerEntity
-                    ) {
-                        if (!(playerEntity instanceof ServerPlayerEntity serverPlayer)) return;
-
-                        if (actionType != SlotActionType.PICKUP) return;
-
-                        // Confirm
-                        if (slot == 5) {
-                            serverPlayer.playerScreenHandler.setCursorStack(ItemStack.EMPTY);
-                            serverPlayer.closeHandledScreen();
-                            RaidDenQueueManager.join(serverPlayer, difficulty);
-                            return;
-                        }
-
-                        // Back
-                        if (slot == 7) {
-                            serverPlayer.playerScreenHandler.setCursorStack(ItemStack.EMPTY);
-                            serverPlayer.closeHandledScreen();
-                            openQueue(serverPlayer.getCommandSource());
-                            return;
-                        }
-
-                        // Block item movement
-                        return;
-                    }
-                };
-            }
-        });
     }
 
 }
