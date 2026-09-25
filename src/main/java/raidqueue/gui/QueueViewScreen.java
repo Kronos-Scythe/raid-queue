@@ -18,6 +18,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import raidqueue.RaidDenQueueManager;
+import raidqueue.config.RaidQueueConfig;
 
 import java.util.List;
 import java.util.Map;
@@ -63,6 +64,7 @@ public class QueueViewScreen {
                 player.getServer(),
                 difficulty
         );
+        int maxPartySize = RaidQueueConfig.get().maxPartySize;
 
         // Use 3 rows (27 slots) to have room for player heads and buttons
         SimpleInventory inv = new SimpleInventory(27);
@@ -74,12 +76,12 @@ public class QueueViewScreen {
             inv.setStack(i, glassPane.copy());
         }
 
-        // Display ALL queued player heads in the middle row (slots 10-15)
-        int headStartSlot = 10; // Start of second row, leave room for 4 players
+        // Display ALL queued player heads in the middle row, centred for the party size
+        int headStartSlot = 10;
         boolean currentPlayerInQueue = false;
 
         // First, show all players already in the queue
-        for (int i = 0; i < Math.min(queuedPlayers.size(), 4); i++) {
+        for (int i = 0; i < Math.min(queuedPlayers.size(), maxPartySize); i++) {
             ServerPlayerEntity queuedPlayer = queuedPlayers.get(i);
             if (queuedPlayer.getUuid().equals(player.getUuid())) {
                 currentPlayerInQueue = true;
@@ -89,7 +91,7 @@ public class QueueViewScreen {
         }
 
         // If current player is not queued yet, show their head with a "Join" indicator
-        if (!currentPlayerInQueue && queuedPlayers.size() < 4) {
+        if (!currentPlayerInQueue && queuedPlayers.size() < maxPartySize) {
             ItemStack yourHead = createPlayerHead(player);
             yourHead.set(DataComponentTypes.CUSTOM_NAME, Text.literal("§e⭐ You §7(Click green to join)"));
             inv.setStack(headStartSlot + queuedPlayers.size(), yourHead);
@@ -104,7 +106,7 @@ public class QueueViewScreen {
         info.set(DataComponentTypes.LORE, new net.minecraft.component.type.LoreComponent(
             List.of(
                 Text.literal("§7Players Ready: " + status),
-                Text.literal("§7Maximum: §e4 players"),
+                Text.literal("§7Maximum: §e" + maxPartySize + " players"),
                 Text.literal(""),
                 Text.literal("§aClick green wool to start!")
             )
@@ -128,7 +130,6 @@ public class QueueViewScreen {
             ));
         } else {
             // Player not in queue - button joins the queue
-            int totalAfterJoin = queuedPlayers.size() + 1;
             confirm.set(DataComponentTypes.CUSTOM_NAME, Text.literal("§e§l⭐ JOIN QUEUE"));
             confirm.set(DataComponentTypes.LORE, new net.minecraft.component.type.LoreComponent(
                 List.of(
@@ -246,7 +247,7 @@ public class QueueViewScreen {
                                 raidqueue.raiddens.RaidDenLauncher.tryLaunch(
                                     serverPlayer.getServerWorld(),
                                     queuedPlayers,
-                                    difficulty  // Pass the difficulty (1-5 stars)
+                                    difficulty  // Raid tier (1-7 stars, gated by RaidTierSupport)
                                 );
 
                                 // Clear the queue after starting

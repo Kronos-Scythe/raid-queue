@@ -1,12 +1,14 @@
 package raidqueue;
 
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import raidqueue.command.RaidDenQueueCommand;
 import raidqueue.command.RaidTeleportBackCommand;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import raidqueue.RaidDenQueueManager;
+import raidqueue.config.RaidQueueConfig;
+import raidqueue.raiddens.RaidDenLauncher;
 
 public class RaidDenQueue implements ModInitializer {
     public static final String MOD_ID = "raid-den-queue";
@@ -18,9 +20,12 @@ public class RaidDenQueue implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        RaidQueueConfig.get();
+
         RaidDenQueueCommand.register();
         RaidTeleportBackCommand.register();
 
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> RaidDenQueueManager.onPlayerDisconnect(handler.player));
+        ServerTickEvents.END_SERVER_TICK.register(RaidDenLauncher::serverTick);
     }
 }
