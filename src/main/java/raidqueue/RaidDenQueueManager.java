@@ -67,7 +67,7 @@ public class RaidDenQueueManager {
         }
 
         // Refresh all open queue screens for this difficulty
-        raidqueue.gui.QueueViewScreen.refreshQueueScreens(player.getServer(), difficulty);
+        raidqueue.gui.QueueLobbyMenu.refreshViewers(player.getServer(), difficulty);
     }
 
 

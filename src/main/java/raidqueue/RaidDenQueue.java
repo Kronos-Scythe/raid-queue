@@ -8,7 +8,10 @@ import raidqueue.command.RaidDenQueueCommand;
 import raidqueue.command.RaidTeleportBackCommand;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import raidqueue.config.RaidQueueConfig;
+import raidqueue.network.ViewNetworking;
 import raidqueue.raiddens.RaidDenLauncher;
+import raidqueue.ui.Menu;
+import raidqueue.ui.ViewManager;
 
 public class RaidDenQueue implements ModInitializer {
     public static final String MOD_ID = "raid-den-queue";
@@ -22,10 +25,16 @@ public class RaidDenQueue implements ModInitializer {
     public void onInitialize() {
         RaidQueueConfig.get();
 
+        ViewNetworking.init();
+
         RaidDenQueueCommand.register();
         RaidTeleportBackCommand.register();
 
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> RaidDenQueueManager.onPlayerDisconnect(handler.player));
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+            RaidDenQueueManager.onPlayerDisconnect(handler.player);
+            ViewManager.clear(handler.player);
+        });
         ServerTickEvents.END_SERVER_TICK.register(RaidDenLauncher::serverTick);
+        ServerTickEvents.END_SERVER_TICK.register(server -> Menu.serverTick());
     }
 }
