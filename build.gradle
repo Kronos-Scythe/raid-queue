@@ -22,6 +22,7 @@ repositories {
 	maven { url = "https://maven.terraformersmc.com/" }
 	maven { url = "https://maven.wispforest.io" }
 	maven { url = "https://api.modrinth.com/maven" }
+	maven { url = "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/" }
 
 	flatDir {
 		dirs "libs"
@@ -125,26 +126,6 @@ publishing {
 		}
 	}
 }
-
-// Auto-copy built JAR to Modrinth modpack folder
-task copyToModpack(type: Copy) {
-	dependsOn build
-	from file("${buildDir}/libs/${project.archives_base_name}-${project.version}.jar")
-	into file("C:/Users/Kronos/AppData/Roaming/ModrinthApp/profiles/COBBLEVERSE - Pokemon Adventure [Cobblemon] (1)/mods")
-
-	// Always run this task, even if Gradle thinks it's up-to-date
-	outputs.upToDateWhen { false }
-
-	doLast {
-		println ""
-		println "✅ SUCCESS: Copied ${project.archives_base_name}-${project.version}.jar to Modrinth modpack!"
-		println "📁 Location: C:/Users/Kronos/AppData/Roaming/ModrinthApp/profiles/COBBLEVERSE - Pokemon Adventure [Cobblemon] (1)/mods"
-		println ""
-	}
-}
-
-// Automatically run copyToModpack after build
-build.finalizedBy copyToModpack
 
 sourceSets {
     main {

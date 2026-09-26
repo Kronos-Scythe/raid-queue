@@ -135,7 +135,7 @@ public final class MenuScreen extends Screen {
             for (int y = 0; y < VIRTUAL_HEIGHT; y += tile) {
                 int w = Math.min(tile, VIRTUAL_WIDTH - x);
                 int h = Math.min(tile, VIRTUAL_HEIGHT - y);
-                context.drawSprite(x, y, w, h, sprite);
+                context.drawSprite(x, y, 0, w, h, sprite);
             }
         }
         context.fill(0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT, BACKGROUND_OVERLAY);

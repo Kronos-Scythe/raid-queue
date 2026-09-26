@@ -43,13 +43,13 @@ public final class ViewManager {
         return OPEN.containsKey(playerId);
     }
 
-    static void handleClose(ServerPlayerEntity player, Identifier viewId) {
+    public static void handleClose(ServerPlayerEntity player, Identifier viewId) {
         OpenMenu open = OPEN.get(player.getUuid());
         if (open == null || (open.viewId != null && !open.viewId.equals(viewId))) return;
         remove(player.getUuid());
     }
 
-    static void handleCustomClick(ServerPlayerEntity player, Identifier viewId, int slot, boolean rightClick) {
+    public static void handleCustomClick(ServerPlayerEntity player, Identifier viewId, int slot, boolean rightClick) {
         OpenMenu open = OPEN.get(player.getUuid());
         // Ignore clicks whose viewId isn't the player's current view (a stale/late packet
         // from a menu that has since been replaced or closed).
