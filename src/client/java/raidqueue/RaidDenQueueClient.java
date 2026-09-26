@@ -1,10 +1,11 @@
 package raidqueue;
 
 import net.fabricmc.api.ClientModInitializer;
+import raidqueue.ui.ClientViewNetworking;
 
 public class RaidDenQueueClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
-		// This entrypoint is suitable for setting up client-specific logic, such as rendering.
+		ClientViewNetworking.init();
 	}
 }

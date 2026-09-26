@@ -21,16 +21,27 @@ Exact pinned versions live in [`gradle.properties`](gradle.properties).
 
 ## Usage
 
-- `/rqueue` — opens the tier-select menu, then a lobby screen showing who's queued for
-  that tier. Click the green wool to join, and again (once you're in the queue) to
-  launch the raid with whoever's currently waiting.
+- `/rqueue` — opens the tier-select screen, then a lobby screen showing who's queued for
+  that tier. Click a tier card to view/join its queue, and click the action card again
+  (once you're in the queue) to launch the raid with whoever's currently waiting.
 - `/rqueue back` — teleports you back to wherever you were standing before you entered
   a raid, in case something goes wrong (e.g. the raid ends and you don't get returned
   automatically).
 
 Raids launch as soon as anyone in the queue clicks "start" — it doesn't wait for a full
-party of 4. Leaving the queue (the red wool / closing the menu without joining) removes
-you; disconnecting does too.
+party. Clicking Back removes you from the queue and returns to tier selection; closing
+the screen (Close, Esc, or the inventory key) does not — you stay queued. Disconnecting
+removes you either way.
+
+### The screen itself
+
+`/rqueue` renders as a custom-drawn screen (party list on the left, the tier/action
+cards in the middle, queue-fill progress on the right) for players running this mod on
+their client. Players without it get an ordinary chest GUI with the same options in the
+same order — nothing is lost, it just looks like vanilla inventory UI instead. This is
+all driven by a small reusable server-driven menu framework (`raidqueue.ui` /
+`raidqueue.network`) that isn't specific to raids: a server builds a `Menu` (options,
+labels, layout), calls `.open(player)`, and it picks the right renderer automatically.
 
 ## Configuration
 
